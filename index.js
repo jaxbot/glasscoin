@@ -12,7 +12,6 @@ var oauth2Client = new OAuth2Client(config.client_id, config.client_secret, conf
 var apiclient = null;
 
 var user_card_ids = {};
-
 var client_tokens = [];
 
 try {
@@ -35,43 +34,38 @@ googleapis.discover('mirror','v1').execute(function(err,client) {
 		updatePinnedItemsList(client_tokens[i].access_token);
 	}
 
-	http.createServer(httpHandler).listen(8099);
-});
-	
-function httpHandler(req,res) {
-	var u = url.parse(req.url, true)
-	var s = u.pathname.split("/");
+	http.createServer(function(req,res) {
+		var u = url.parse(req.url, true)
+		var s = u.pathname.split("/");
 
-	if (s[1] == "oauth2callback") {
-		oauth2Client.getToken(u.query.code, function(err,tokens) {
-			if (err) {
-				console.log(err);
-			} else {
-				client_tokens.push(tokens);
-				saveTokens();
-				updatePinnedItemsList(tokens.access_token);
-			}
-			res.write('');
-			res.end();
-		});
-		return;
-	}
-	
-	if (!oauth2Client.credentials) {
-		var uri = oauth2Client.generateAuthUrl({
-			access_type: 'offline',
-			scope: 'https://www.googleapis.com/auth/glass.timeline'
-		});
-		res.writeHead(301, { "Location": uri });
-		res.end();
-	} else {
-		if (s[1] == "timeline") {
-			getMarketData();
+		if (s[1] == "oauth2callback") {
+			oauth2Client.getToken(u.query.code, function(err,tokens) {
+				if (err) {
+					console.log(err);
+				} else {
+					client_tokens.push(tokens);
+					fs.writeFileSync(".clienttokens.json", JSON.stringify(client_tokens,null,5));
+					updatePinnedItemsList(tokens.access_token);
+				}
+				res.write('Application connected. You should see the card soon on your Glass.');
+				res.end();
+			});
+			return;
 		}
-		res.write('Glass Mirror API with Node');
-		res.end();
-	}
-};
+		
+		if (s[1] == "authorize") {
+			var uri = oauth2Client.generateAuthUrl({
+				access_type: 'offline',
+				scope: 'https://www.googleapis.com/auth/glass.timeline'
+			});
+			res.writeHead(301, { "Location": uri });
+			res.end();
+		} else {
+			res.write('Glass Mirror API with Node. <a href="authorize">Connect to your Glass</a>');
+			res.end();
+		}
+	}).listen(8099);
+});
 
 function getMarketData() {
 	http.get("http://api.bitcoinaverage.com/ticker/global/USD/", function(res) {
@@ -87,11 +81,10 @@ function getMarketData() {
 			updateCards(btclast, btcdelta.toPrecision(3), market["24h_avg"], market.timestamp);
 		});
 	});
-	updateCards();
 }
 
 function updateCards(btclast, btcdelta, avg, time) {
-	var html = "<article>\n  <section>\n    <img src='http://www.idimmu.net/wp-content/uploads/2013/03/bitcoin.png' width=200 height=200 style='float:left;margin-right:20px'>\n<p>Bitcoin</p>\n<span class='text-large'>$" + btclast + " <span class='" + ((btcdelta < 0) ? 'red' : 'green') + "'>" + btcdelta + "%</span></span>\n<p>$" + avg + " (24h)\n  </section>\n<footer>" + time + "</footer>\n</article>";
+	var html = "<article>\n<section>\n<img src='https://raw.github.com/jaxbot/glasscoin/master/bitcoin.png' width=200 height=200 style='float:left;margin-right:20px'>\n<p>Bitcoin</p>\n<span class='text-large'>$" + btclast + " <span class='" + ((btcdelta < 0) ? 'red' : 'green') + "'>" + btcdelta + "%</span></span>\n<p>$" + avg + " (24h)\n</section>\n<footer>" + time + "</footer>\n</article>";
 
 	for (i = 0; i < client_tokens.length; i++) {
 		var apiCall;
@@ -122,13 +115,6 @@ function updateCards(btclast, btcdelta, avg, time) {
 	}
 }
 
-// update every 15
-setInterval(getMarketData, 60 * 1000 * 15);
-
-function saveTokens() {
-	fs.writeFileSync(".clienttokens.json", JSON.stringify(client_tokens,null,5));
-}
-
 function updatePinnedItemsList(access_token) {
 	for (var i = 0; i < client_tokens.length; i++) {
 		if (client_tokens[i].access_token == access_token) {
@@ -146,4 +132,7 @@ function updatePinnedItemsList(access_token) {
 			getMarketData();
 	});
 }
+
+// update every 15 minutes
+setInterval(getMarketData, 60 * 1000 * 15);
 
