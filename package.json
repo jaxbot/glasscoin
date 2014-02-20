@@ -1,0 +1,14 @@
+{
+  "name": "glasscoin",
+  "version": "0.0.0",
+  "description": "Bitcoin/Litecoin/Dogecoin updates for Glass",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Jonathan Warner (Jaxbot)",
+  "license": "BSD-2-Clause",
+  "dependencies": {
+    "googleapis": "~0.6.1"
+  }
+}
