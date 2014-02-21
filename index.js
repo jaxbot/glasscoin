@@ -56,7 +56,8 @@ googleapis.discover('mirror','v1').execute(function(err,client) {
 		if (s[1] == "authorize") {
 			var uri = oauth2Client.generateAuthUrl({
 				access_type: 'offline',
-				scope: 'https://www.googleapis.com/auth/glass.timeline'
+				scope: 'https://www.googleapis.com/auth/glass.timeline',
+				approval_prompt: 'force'
 			});
 			res.writeHead(301, { "Location": uri });
 			res.end();
@@ -126,7 +127,7 @@ function updatePinnedItemsList(access_token) {
 		.withAuthClient(oauth2Client)
 		.execute(function(err,data) {
 			console.log(data);
-			if (data.items.length > 0) {
+			if (data && data.items && data.items.length > 0) {
 				user_card_ids[access_token] = data.items[0].id;
 			}
 			getMarketData();
