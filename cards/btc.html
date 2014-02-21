@@ -1,0 +1,15 @@
+<article>
+	<section>
+		<img src='https://raw.github.com/jaxbot/glasscoin/master/bitcoin.png' width=200 height=200 style='float:left;margin-right:20px'>
+		<p>Bitcoin</p>
+		<span class='text-large'>
+			${{= it.btclast }}
+			<span class='{{= ((it.btcdelta < 0) ? 'red' : 'green') }}'>
+				{{= it.btcdelta }}%
+			</span>
+		</span>
+		<p>${{= it.avg }} (24h)
+	</section>
+	<footer>{{= it.time }}</footer>
+</article>
+

@@ -58,14 +58,16 @@ googleapis.discover('mirror','v1').execute(function(err,client) {
 		if (s[1] == "oauth2callback") {
 			oauth2Client.getToken(u.query.code, function(err,tokens) {
 				if (err) {
+					res.write("Oh no! Something went wrong! Looks like the token may be old. Try going back and doing it all again. The incident has been logged and Jonathan will be looking into it.");
+					res.end();
 					console.log(err);
 				} else {
 					client_tokens.push(tokens);
 					fs.writeFileSync(".clienttokens.json", JSON.stringify(client_tokens,null,5));
 					getMarketData();
 				}
-				res.write('Application connected. You should see the card soon on your Glass.');
-				res.end();
+				res.writeHead(200, { 'Content-type': 'text/html' });
+				fs.createReadStream('success.html').pipe(res);
 			});
 			return;
 		}
@@ -76,11 +78,11 @@ googleapis.discover('mirror','v1').execute(function(err,client) {
 				scope: 'https://www.googleapis.com/auth/glass.timeline',
 				approval_prompt: 'force'
 			});
-			res.writeHead(301, { "Location": uri });
+			res.writeHead(302, { "Location": uri });
 			res.end();
 		} else {
-			res.write('Glass Mirror API with Node. <a href="authorize">Connect to your Glass</a>');
-			res.end();
+			res.writeHead(200, { 'Content-type': 'text/html' });
+			fs.createReadStream('index.html').pipe(res);
 		}
 	}).listen(8099);
 });
