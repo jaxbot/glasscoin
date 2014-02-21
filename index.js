@@ -1,19 +1,28 @@
+/* Glasscoin
+ * Bitcoin ticker app for Glass
+ * Example, primarily, but it does work.
+ * Jonathan Warner, 2014
+ */
+
+// Standard modules
 var http = require('http');
 var url = require("url");
 var fs = require('fs');
 
+// Google API
 var googleapis = require('googleapis');
 var OAuth2Client = googleapis.OAuth2Client;
 
+// Load in the client configuration and attach to OAuth client
 var config = require("./config.json");
-
 var oauth2Client = new OAuth2Client(config.client_id, config.client_secret, config.redirect_url);
 
+// Store global variables
 var apiclient = null;
-
 var user_card_ids = {};
 var client_tokens = [];
 
+// Attempt to load stored client tokens
 try {
 	var filedata = fs.readFileSync(".clienttokens.json");
 	if (filedata) {
@@ -23,17 +32,21 @@ try {
 	console.log("Info: failed to load .clienttokens.json, using blank array");
 }
 
+// read the connected users information from disk
 googleapis.discover('mirror','v1').execute(function(err,client) {
 	if (err) {
 		console.warn("ERR: " + err.toString());
 		return;
 	}
+
 	apiclient = client;
 
+	// update the cards for users who are already connected
 	for(var i = 0; i < client_tokens.length; i++) {
 		updatePinnedItemsList(client_tokens[i].access_token);
 	}
 
+	// http server interface for adding clients
 	http.createServer(function(req,res) {
 		var u = url.parse(req.url, true)
 		var s = u.pathname.split("/");
@@ -68,6 +81,7 @@ googleapis.discover('mirror','v1').execute(function(err,client) {
 	}).listen(8099);
 });
 
+// download the ticker data and build data
 function getMarketData() {
 	http.get("http://api.bitcoinaverage.com/ticker/global/USD/", function(res) {
 		var data = "";
@@ -84,6 +98,7 @@ function getMarketData() {
 	});
 }
 
+// update all the user cards
 function updateCards(btclast, btcdelta, avg, time) {
 	var html = "<article>\n<section>\n<img src='https://raw.github.com/jaxbot/glasscoin/master/bitcoin.png' width=200 height=200 style='float:left;margin-right:20px'>\n<p>Bitcoin</p>\n<span class='text-large'>$" + btclast + " <span class='" + ((btcdelta < 0) ? 'red' : 'green') + "'>" + btcdelta + "%</span></span>\n<p>$" + avg + " (24h)\n</section>\n<footer>" + time + "</footer>\n</article>";
 
@@ -116,6 +131,7 @@ function updateCards(btclast, btcdelta, avg, time) {
 	}
 }
 
+// check for pinned cards and update them
 function updatePinnedItemsList(access_token) {
 	for (var i = 0; i < client_tokens.length; i++) {
 		if (client_tokens[i].access_token == access_token) {
