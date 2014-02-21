@@ -13,6 +13,12 @@ var fs = require('fs');
 var googleapis = require('googleapis');
 var OAuth2Client = googleapis.OAuth2Client;
 
+// dot templates
+var dot = require('dot');
+var cards = {
+	"btc": dot.template(fs.readFileSync("cards/btc.html"))
+};
+
 // Load in the client configuration and attach to OAuth client
 var config = require("./config.json");
 var oauth2Client = new OAuth2Client(config.client_id, config.client_secret, config.redirect_url);
@@ -88,18 +94,22 @@ function getMarketData() {
 		});
 		res.on('end', function() {
 			var market = JSON.parse(data.toString());
-			var btclast = market.last;
-			var btcdelta = 100 * (market.last - market["24h_avg"]) / market["24h_avg"];
+			var delta = 100 * (market.last - market["24h_avg"]) / market["24h_avg"];
 
-			updateCards(btclast, btcdelta.toPrecision(3), market["24h_avg"], market.timestamp);
+			updateCards({
+				btclast: market.last,
+				btcdelta: delta.toPrecision(3),
+				avg: market['24h_avg'],
+				time: market.timestamp
+			});
 		});
 	});
 }
 
 // update all the user cards
-function updateCards(btclast, btcdelta, avg, time) {
-	var html = "<article>\n<section>\n<img src='https://raw.github.com/jaxbot/glasscoin/master/bitcoin.png' width=200 height=200 style='float:left;margin-right:20px'>\n<p>Bitcoin</p>\n<span class='text-large'>$" + btclast + " <span class='" + ((btcdelta < 0) ? 'red' : 'green') + "'>" + btcdelta + "%</span></span>\n<p>$" + avg + " (24h)\n</section>\n<footer>" + time + "</footer>\n</article>";
-
+function updateCards(data) {
+	var html = cards.btc(data);
+	
 	for (i = 0; i < client_tokens.length; i++) {
 		oauth2Client.credentials = client_tokens[i];
 		apiclient.mirror.timeline.list({ "sourceItemId": "glasscoin", "isPinned": true })
