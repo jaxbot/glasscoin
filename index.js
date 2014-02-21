@@ -41,12 +41,7 @@ googleapis.discover('mirror','v1').execute(function(err,client) {
 
 	apiclient = client;
 
-	// update the list of cards for users who pinned it
-	for(var i = 0; i < client_tokens.length; i++) {
-		updatePinnedItemsList(client_tokens[i]);
-	}
-
-	// update the cards
+	// update cards
 	getMarketData();
 
 	// http server interface for adding clients
@@ -61,7 +56,7 @@ googleapis.discover('mirror','v1').execute(function(err,client) {
 				} else {
 					client_tokens.push(tokens);
 					fs.writeFileSync(".clienttokens.json", JSON.stringify(client_tokens,null,5));
-					updatePinnedItemsList(tokens);
+					getMarketData();
 				}
 				res.write('Application connected. You should see the card soon on your Glass.');
 				res.end();
@@ -106,51 +101,36 @@ function updateCards(btclast, btcdelta, avg, time) {
 	var html = "<article>\n<section>\n<img src='https://raw.github.com/jaxbot/glasscoin/master/bitcoin.png' width=200 height=200 style='float:left;margin-right:20px'>\n<p>Bitcoin</p>\n<span class='text-large'>$" + btclast + " <span class='" + ((btcdelta < 0) ? 'red' : 'green') + "'>" + btcdelta + "%</span></span>\n<p>$" + avg + " (24h)\n</section>\n<footer>" + time + "</footer>\n</article>";
 
 	for (i = 0; i < client_tokens.length; i++) {
-		var apiCall;
-		if (id = user_card_ids[client_tokens[i].access_token]) {
-			apiCall = apiclient.mirror.timeline.patch({"id": id }, {"html": html});
-		}
-		else
-			apiCall = apiclient.mirror.timeline.insert({
-				"html": html,
-				"menuItems": [
-					{"action":"TOGGLE_PINNED"},
-					{"action":"DELETE"}
-				],
-				"sourceItemId": "glasscoin"
-			});
-
 		oauth2Client.credentials = client_tokens[i];
-		console.log(client_tokens[i]);
+		apiclient.mirror.timeline.list({ "sourceItemId": "glasscoin", "isPinned": true })
+		.withAuthClient(oauth2Client)
+		.execute(function(err,data) {
+			var apiCall;
+			if (err) {
+				console.log(err);
+				return;
+			}
+			if (data && data.items.length > 0) {
+				apiCall = apiclient.mirror.timeline.patch({"id": data.items[0].id }, {"html": html});
+			} else {
+				apiCall = apiclient.mirror.timeline.insert({
+					"html": html,
+					"menuItems": [
+						{"action":"TOGGLE_PINNED"},
+						{"action":"DELETE"}
+					],
+					"sourceItemId": "glasscoin"
+				});
+			}
 
-		(function(i) {
 			apiCall.withAuthClient(oauth2Client).execute(function(err,data) {
 				console.log(err);
 				console.log(data);
-				if (data && data.isPinned)
-					user_card_ids[client_tokens[i].access_token] = data.id;
-				else
-					user_card_ids[client_tokens[i].access_token] = "";
-
-			})
-		})(i);
+			});
+		});
 	}
 }
 
-// check for pinned cards and update them
-function updatePinnedItemsList(token) {
-	oauth2Client.credentials = token;
-
-	apiclient.mirror.timeline.list({ "sourceItemId": "glasscoin", "isPinned": true })
-		.withAuthClient(oauth2Client)
-		.execute(function(err,data) {
-			console.log(data);
-			if (data && data.items && data.items.length > 0) {
-				user_card_ids[token.access_token] = data.items[0].id;
-			}
-	});
-}
-
 // update every 15 minutes
-setInterval(getMarketData, 60 * 1000 * 15);
+setInterval(updateCards, 60 * 1000 * 15);
 
