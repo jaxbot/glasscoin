@@ -41,10 +41,13 @@ googleapis.discover('mirror','v1').execute(function(err,client) {
 
 	apiclient = client;
 
-	// update the cards for users who are already connected
+	// update the list of cards for users who pinned it
 	for(var i = 0; i < client_tokens.length; i++) {
-		updatePinnedItemsList(client_tokens[i].access_token);
+		updatePinnedItemsList(client_tokens[i]);
 	}
+
+	// update the cards
+	getMarketData();
 
 	// http server interface for adding clients
 	http.createServer(function(req,res) {
@@ -58,7 +61,7 @@ googleapis.discover('mirror','v1').execute(function(err,client) {
 				} else {
 					client_tokens.push(tokens);
 					fs.writeFileSync(".clienttokens.json", JSON.stringify(client_tokens,null,5));
-					updatePinnedItemsList(tokens.access_token);
+					updatePinnedItemsList(tokens);
 				}
 				res.write('Application connected. You should see the card soon on your Glass.');
 				res.end();
@@ -124,29 +127,27 @@ function updateCards(btclast, btcdelta, avg, time) {
 			apiCall.withAuthClient(oauth2Client).execute(function(err,data) {
 				console.log(err);
 				console.log(data);
-				if (!user_card_ids[client_tokens[i].access_token])
+				if (data && data.isPinned)
 					user_card_ids[client_tokens[i].access_token] = data.id;
+				else
+					user_card_ids[client_tokens[i].access_token] = "";
+
 			})
 		})(i);
 	}
 }
 
 // check for pinned cards and update them
-function updatePinnedItemsList(access_token) {
-	for (var i = 0; i < client_tokens.length; i++) {
-		if (client_tokens[i].access_token == access_token) {
-			oauth2Client.credentials = client_tokens[i];
-		}
-	}
+function updatePinnedItemsList(token) {
+	oauth2Client.credentials = token;
 
-	apiclient.mirror.timeline.list({ "sourceItemId": "glasscoin" })
+	apiclient.mirror.timeline.list({ "sourceItemId": "glasscoin", "isPinned": true })
 		.withAuthClient(oauth2Client)
 		.execute(function(err,data) {
 			console.log(data);
 			if (data && data.items && data.items.length > 0) {
-				user_card_ids[access_token] = data.items[0].id;
+				user_card_ids[token.access_token] = data.items[0].id;
 			}
-			getMarketData();
 	});
 }
 
