@@ -144,5 +144,5 @@ function updateCards(data) {
 }
 
 // update every 15 minutes
-setInterval(updateCards, 60 * 1000 * 15);
+setInterval(getMarketData, 60 * 1000 * 15);
 
