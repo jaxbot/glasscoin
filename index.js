@@ -105,6 +105,11 @@ function getMarketData() {
 				time: market.timestamp
 			});
 		});
+		res.on('error', function(err) {
+			console.warn(err);
+		});
+	}).on('error', function(err) {
+		console.warn(err);
 	});
 }
 

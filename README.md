@@ -3,3 +3,5 @@
 
 Proof of concept Glassware using the Mirror API to stream in Bitcoin data.
 
+Written in Node.js
+
