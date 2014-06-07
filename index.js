@@ -6,6 +6,7 @@
 
 // Standard modules
 var http = require('http');
+var https = require('https');
 var url = require("url");
 var fs = require('fs');
 
@@ -89,7 +90,7 @@ googleapis.discover('mirror','v1').execute(function(err,client) {
 
 // download the ticker data and build data
 function getMarketData() {
-	http.get("http://api.bitcoinaverage.com/ticker/global/USD/", function(res) {
+	https.get("https://api.bitcoinaverage.com/ticker/global/USD/", function(res) {
 		var data = "";
 		res.on('data', function(chunk) {
 			data += chunk;
